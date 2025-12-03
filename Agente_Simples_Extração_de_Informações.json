@@ -1,0 +1,220 @@
+{
+  "name": "Agente Simples - Extração de Informações",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "aba1a9cf-80c5-4f4a-ad34-9feddc9dd71e",
+        "options": {
+          "rawBody": true
+        }
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        0,
+        0
+      ],
+      "id": "187d0fca-82f9-4ecd-97d5-e006316166b6",
+      "name": "Webhook",
+      "webhookId": "aba1a9cf-80c5-4f4a-ad34-9feddc9dd71e"
+    },
+    {
+      "parameters": {
+        "options": {
+          "maxTokens": 1000,
+          "responseFormat": "text",
+          "temperature": 0.7,
+          "maxRetries": 2
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenRouter",
+      "typeVersion": 1,
+      "position": [
+        320,
+        224
+      ],
+      "id": "0c404a3d-f062-4205-96b4-2135a1a65c95",
+      "name": "OpenRouter Chat Model",
+      "credentials": {
+        "openRouterApi": {
+          "id": "RvRIcJMdu3FYtkMc",
+          "name": "OpenRouter account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "resource": "message",
+        "guildId": {
+          "__rl": true,
+          "value": "={{ $('Webhook').item.json.body.guild_id }}",
+          "mode": "id"
+        },
+        "channelId": {
+          "__rl": true,
+          "value": "={{ $('Webhook').item.json.body.channel_id }}",
+          "mode": "id"
+        },
+        "content": "={{ $json.text.toString() }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.discord",
+      "typeVersion": 2,
+      "position": [
+        896,
+        0
+      ],
+      "id": "d2b53720-867a-485f-8c70-75cac7e07883",
+      "name": "Send a message",
+      "webhookId": "42e7cad3-7a2a-4278-85b4-39aab0ca1b26",
+      "credentials": {
+        "discordBotApi": {
+          "id": "F9TQcpRTuCbohOvU",
+          "name": "Discord Bot account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=não mais que 2000 caracteris resolva o seguinte prompt: \n```\n{{ $json.body.prompt }}\n```\napós responda quantos tokens foram usados, quero a resposta dos tokens assim:\n```\ntokens: <valor>\n```",
+        "batching": {
+          "batchSize": 5
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.chainLlm",
+      "typeVersion": 1.7,
+      "position": [
+        320,
+        0
+      ],
+      "id": "4e442fc6-b187-4eb9-84fd-c781ae7ace11",
+      "name": "Basic LLM Chain"
+    },
+    {
+      "parameters": {
+        "language": "python",
+        "pythonCode": "# Loop over input items and add a new field called 'myNewField' to the JSON of each one\nresponse_text = _input.first().json.text\n\nlines = response_text.split(\"\\n\")\n\ntokens = [line.replace(\"tokens: \", \"\") for line in lines if \"tokens: \" in line]\n\ntext = \"\\n\".join([line for line in lines if \"tokens: \" not in line and line])\n\nreturn {\"tokens\": tokens[0], \"text\": text}\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        672,
+        0
+      ],
+      "id": "32fab93b-ba2e-409a-869b-d011aad76a04",
+      "name": "Code in Python (Beta)"
+    },
+    {
+      "parameters": {
+        "resource": "message",
+        "guildId": {
+          "__rl": true,
+          "value": "={{ $('Webhook').item.json.body.guild_id }}",
+          "mode": "id"
+        },
+        "channelId": {
+          "__rl": true,
+          "value": "={{ $('Webhook').item.json.body.channel_id }}",
+          "mode": "id"
+        },
+        "content": "=tokens usados foram: {{ $('Code in Python (Beta)').item.json.tokens.toString() }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.discord",
+      "typeVersion": 2,
+      "position": [
+        1136,
+        0
+      ],
+      "id": "f1817ace-f419-407d-9ea9-a6c0d28ba2ae",
+      "name": "Send a message1",
+      "webhookId": "42e7cad3-7a2a-4278-85b4-39aab0ca1b26",
+      "credentials": {
+        "discordBotApi": {
+          "id": "F9TQcpRTuCbohOvU",
+          "name": "Discord Bot account"
+        }
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "Basic LLM Chain",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenRouter Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Basic LLM Chain",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Basic LLM Chain": {
+      "main": [
+        [
+          {
+            "node": "Code in Python (Beta)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send a message": {
+      "main": [
+        [
+          {
+            "node": "Send a message1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in Python (Beta)": {
+      "main": [
+        [
+          {
+            "node": "Send a message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "saveDataErrorExecution": "all",
+    "saveDataSuccessExecution": "none",
+    "saveExecutionProgress": false,
+    "saveManualExecutions": false,
+    "callerPolicy": "workflowsFromSameOwner",
+    "executionTimeout": 60,
+    "availableInMCP": false,
+    "timeSavedPerExecution": 60,
+    "errorWorkflow": "Nln6lj3WQcilJFTN"
+  },
+  "versionId": "4533cf3a-b438-491b-bc53-64b1a42c59bc",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "c9e991d8f7c74a3e73cfa4fde60cff0b184287b3339e9eea87b70b8656ba57df"
+  },
+  "id": "Nln6lj3WQcilJFTN",
+  "tags": []
+}

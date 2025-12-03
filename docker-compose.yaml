@@ -1,0 +1,31 @@
+version: "3.9"
+
+services:
+  n8n:
+    image: docker.n8n.io/n8nio/n8n
+    container_name: n8n
+    depends_on:
+      - discord-bot
+    ports:
+      - "5678:5678"
+    environment:
+      GENERIC_TIMEZONE: "America/Sao_Paulo"
+      TZ: "America/Sao_Paulo"
+      N8N_ENFORCE_SETTINGS_FILE_PERMISSIONS: "true"
+      N8N_RUNNERS_ENABLED: "true"
+    volumes:
+      - n8n_data:/home/node/.n8n
+    command: ["start"]
+    restart: unless-stopped
+  discord-bot:
+    build:
+      context: ./discord_bot
+    container_name: discord_bot
+    restart: unless-stopped
+    env_file:
+      - ./discord_bot/.env
+    volumes:
+      - ./discord_bot/src:/app/src
+
+volumes:
+  n8n_data:
